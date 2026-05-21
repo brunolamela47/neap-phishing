@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.spec
+
+# SQLite
+*.db
+*.sqlite3
+
+# Virtual Environment
+venv/
+env/
+.env
+
+# PyInstaller
+*.exe
+
+# VS Code
+.vscode/
+
+# Dataset
+ml/dataset/*.csv
