@@ -10,11 +10,27 @@ def get_connection():
 	conn.execute("PRAGMA foreign_keys = ON")
 	return conn
 
-def criar_tabelas():
+def create_tables():
 	conn = get_connection()
 	cursor = conn.cursor()
 	
 	cursor.executescript("""
+
+		CREATE TABLE IF NOT EXISTS USERS (
+			id_user INTEGER PRIMARY KEY AUTOINCREMENT,
+			username TEXT NOT NULL UNIQUE,
+			email TEXT NOT NULL UNIQUE,
+			password TEXT NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE TABLE IF NOT EXISTS SESSIONS (
+			id_session INTEGER PRIMARY KEY AUTOINCREMENT,
+			id_user INTEGER NOT NULL,
+			token TEXT NOT NULL UNIQUE,
+			expires_at DATETIME NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (id_user) REFERENCES USERS(id_user)
+		);
 		CREATE TABLE IF NOT EXISTS EMAILS (
 			id_email INTEGER PRIMARY KEY AUTOINCREMENT,
 			remetente TEXT NOT NULL,
@@ -58,4 +74,4 @@ def criar_tabelas():
 	print("Tabelas criadas!")
 
 if __name__ == "__main__":
-	criar_tabelas()
+	create_tables()

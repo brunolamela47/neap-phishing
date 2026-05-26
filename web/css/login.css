@@ -1,0 +1,124 @@
+/* ─────────────────────────────────────────
+   NEAP — Login Page Styles
+   ───────────────────────────────────────── */
+
+body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+.login-wrapper {
+    width: 100%;
+    max-width: 400px;
+    padding: 24px;
+    animation: fadeIn 0.4s ease;
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.login-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    background: var(--accent-soft);
+    border-radius: var(--radius-md);
+    margin-bottom: 16px;
+}
+
+.login-logo svg {
+    width: 24px;
+    height: 24px;
+    stroke: var(--accent);
+}
+
+.login-header h1 {
+    font-size: 1.5rem;
+    margin-bottom: 6px;
+}
+
+.login-header p {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.login-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    box-shadow: var(--shadow-lg);
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+.login-footer {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.theme-toggle-login {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+}
+
+.error-msg {
+    background: #ef444415;
+    border: 1px solid #ef444430;
+    color: var(--danger);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    display: none;
+}
+
+.error-msg.show {
+    display: block;
+}
+
+.input-wrapper {
+    position: relative;
+}
+
+.input-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    user-select: none;
+}
+
+.input-wrapper .input {
+    padding-right: 40px;
+}

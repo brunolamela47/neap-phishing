@@ -1,1 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEAP — Login</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/login.css">
+</head>
+<body>
 
+    <!-- Theme Toggle -->
+    <button class="theme-toggle theme-toggle-login" onclick="toggleTheme()" title="Toggle theme">
+        <span id="theme-icon">🌙</span>
+    </button>
+
+    <div class="login-wrapper">
+
+        <!-- Header -->
+        <div class="login-header">
+            <div class="login-logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+            </div>
+            <h1>NEAP</h1>
+            <p>Network Email Anti-Phishing</p>
+        </div>
+
+        <!-- Card -->
+        <div class="login-card">
+            <div class="login-form">
+
+                <div id="error-msg" class="error-msg">
+                    Invalid username or password.
+                </div>
+
+                <div class="input-group">
+                    <label for="username">Username</label>
+                    <input
+                        class="input"
+                        type="text"
+                        id="username"
+                        placeholder="Enter your username"
+                        autocomplete="username"
+                    />
+                </div>
+
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <div class="input-wrapper">
+                        <input
+                            class="input"
+                            type="password"
+                            id="password"
+                            placeholder="Enter your password"
+                            autocomplete="current-password"
+                        />
+                        <span class="input-icon" onclick="togglePassword()">👁</span>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary btn-full" id="login-btn" onclick="handleLogin()">
+                    Sign in
+                </button>
+
+                <div class="divider">NEAP v1.0.0</div>
+
+                <div class="login-footer">
+                    CTeSP Cibersegurança · ISTEC Porto
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <script src="../js/app.js"></script>
+    <script src="../js/login.js"></script>
+</body>
+</html>
