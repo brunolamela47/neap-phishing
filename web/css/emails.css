@@ -1,1 +1,118 @@
+/* ─────────────────────────────────────────
+   NEAP — Emails Page Styles
+   ───────────────────────────────────────── */
 
+.analyze-form {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.analyze-form.show { display: block; }
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.auth-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 1rem;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    transition: var(--transition);
+}
+
+.close-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.search-input {
+    width: 240px;
+    padding: 7px 12px;
+    font-size: 0.85rem;
+}
+
+/* ─── Result Card ─── */
+.result-card {
+    display: none;
+    animation: fadeIn 0.3s ease;
+    border-left: 4px solid var(--accent);
+}
+
+.result-card.show { display: block; }
+.result-card.low      { border-left-color: var(--success); }
+.result-card.medium   { border-left-color: var(--warning); }
+.result-card.high     { border-left-color: #f97316; }
+.result-card.critical { border-left-color: var(--danger); }
+
+.result-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.result-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    background: var(--bg-tertiary);
+}
+
+.result-score-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.result-score-label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    min-width: 110px;
+}
+
+.result-score-value {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    min-width: 60px;
+}
+
+.result-details {
+    margin-top: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.detail-tag {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 4px 10px;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    font-family: 'DM Mono', monospace;
+}
