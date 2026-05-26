@@ -184,3 +184,112 @@ async def export_logs(format: str = "csv", authorization: Optional[str] = Header
         )
 
     raise HTTPException(status_code=400, detail="Format not supported yet")
+
+# Adiciona estes endpoints ao backend/dashboard.py
+
+# ─────────────────────────────────────────
+# LOGS
+# ─────────────────────────────────────────
+@router.get("/logs")
+async def get_logs(authorization: Optional[str] = Header(None)):
+    verify_token(authorization)
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id_log, id_analise, data_hora, evento, ip_origem, spf, dkim, dmarc
+        FROM LOGS
+        ORDER BY data_hora DESC
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    logs = [
+        {
+            "id_log":     row[0],
+            "id_analise": row[1],
+            "data_hora":  row[2],
+            "evento":     row[3],
+            "ip_origem":  row[4],
+            "spf":        row[5],
+            "dkim":       row[6],
+            "dmarc":      row[7]
+        }
+        for row in rows
+    ]
+
+    return {"success": True, "date": {"logs": logs}}
+
+
+# ─────────────────────────────────────────
+# ALERTS
+# ─────────────────────────────────────────
+@router.get("/alerts")
+async def get_alerts(authorization: Optional[str] = Header(None)):
+    verify_token(authorization)
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id_alerta, id_log, tipo_alerta, estado_alerta,
+               datetime('now') as data_hora
+        FROM ALERTAS
+        ORDER BY id_alerta DESC
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    alerts = [
+        {
+            "id_alerta":    row[0],
+            "id_log":       row[1],
+            "tipo_alerta":  row[2],
+            "estado_alerta": row[3],
+            "data_hora":    row[4]
+        }
+        for row in rows
+    ]
+
+    return {"success": True, "date": {"alerts": alerts}}
+
+
+# ─────────────────────────────────────────
+# RESOLVE ALERT
+# ─────────────────────────────────────────
+@router.post("/alerts/{id_alerta}/resolve")
+async def resolve_alert(id_alerta: int, authorization: Optional[str] = Header(None)):
+    verify_token(authorization)
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE ALERTAS SET estado_alerta = 'RESOLVED'
+        WHERE id_alerta = ?
+    """, (id_alerta,))
+
+    conn.commit()
+    conn.close()
+
+    return {"success": True, "message": "Alert resolved"}
+
+
+# ─────────────────────────────────────────
+# RESOLVE ALL ALERTS
+# ─────────────────────────────────────────
+@router.post("/alerts/resolve-all")
+async def resolve_all_alerts(authorization: Optional[str] = Header(None)):
+    verify_token(authorization)
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE ALERTAS SET estado_alerta = 'RESOLVED'
+        WHERE estado_alerta = 'ACTIVE'
+    """)
+
+    conn.commit()
+    conn.close()
+
+    return {"success": True, "message": "All alerts resolved"}
