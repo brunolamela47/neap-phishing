@@ -28,7 +28,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router, prefix = "/auth", tags = ["Authentication"])
-app.include_router(email_router, prefix = "/admin", tags = ["Emails"])
+app.include_router(email_router, prefix = "/emails", tags = ["Emails"])
 app.include_router(dashboard_router, prefix = "/dashboard", tags = ["Dashboard"])
 
 @app.on_event("startup")

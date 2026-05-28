@@ -67,13 +67,18 @@ async function loadDashboard() {
             const d = data.date;
 
             // Update metric cards
-            animateNumber('total-emails',   d.total_emails   || 0);
-            animateNumber('total-phishing', d.total_phishing || 0);
-            animateNumber('total-legit',    d.total_legit    || 0);
-            animateNumber('avg-score',      d.avg_score      || 0);
+           animateNumber('total-emails',   d.total_emails   || 0);
+animateNumber('total-phishing', d.total_phishing || 0);
+animateNumber('total-legit',    d.total_legit    || 0);
+animateNumber('avg-score',      d.avg_score      || 0);
 
-            // Score bar
-            document.getElementById('score-bar-fill').style.width = `${d.avg_score || 0}%`;
+// Trends
+document.getElementById('trend-total').textContent    = d.trend_total    || '+0%';
+document.getElementById('trend-phishing').textContent = d.trend_phishing || '+0%';
+document.getElementById('trend-legit').textContent    = d.trend_legit    || '+0%';
+
+// Score bar
+document.getElementById('score-bar-fill').style.width = `${d.avg_score || 0}%`;
 
             // Alert badge
             const badge = document.getElementById('alert-badge');
@@ -262,26 +267,30 @@ async function exportLogs(format) {
     if (!token) return;
 
     try {
-        const response = await fetch(`${API_URL}/dashboard/export?format=${format}`, {
+        const response = await fetch(`${API_URL}/dashboard/export/save?format=${format}`, {
             headers: { "Authorization": `Bearer ${token}` }
         });
 
-        const blob = await response.blob();
-        const url  = window.URL.createObjectURL(blob);
-        const a    = document.createElement('a');
-        a.href     = url;
-        a.download = `neap-logs.${format}`;
-        a.click();
-        window.URL.revokeObjectURL(url);
+        const data = await response.json();
+
+        if (data.success) {
+            alert(`✅ Ficheiro guardado no Ambiente de Trabalho!\n\n${data.path}`);
+        } else {
+            alert('Erro ao guardar ficheiro.');
+        }
+
     } catch (err) {
-        alert('Export failed. Please try again.');
+        console.error('Export error:', err);
+        alert('Erro ao exportar.');
     }
 }
-
 // ─── Logout ───
-function handleLogout() {
+async function handleLogout() {
+    // Clear session file
+    await fetch("http://localhost:8000/auth/clear-session", { method: "POST" });
     localStorage.removeItem('neap-token');
     localStorage.removeItem('neap-user');
+    localStorage.removeItem('neap-remember');
     window.location.href = 'login.html';
 }
 

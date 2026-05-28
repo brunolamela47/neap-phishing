@@ -40,14 +40,27 @@ def create_tables():
 		);
 		
 		CREATE TABLE IF NOT EXISTS ANALISES (
-			id_analise INTEGER PRIMARY KEY AUTOINCREMENT,
-			id_email INTEGER NOT NULL,
-			score INTEGER NOT NULL,
-			resultado TEXT NOT NULL,
-			nivel_risco TEXT NOT NULL,
-			FOREIGN KEY (id_email) REFERENCES EMAILS(id_email)
-		);
-		
+    id_analise           INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_email             INTEGER NOT NULL,
+    score                INTEGER NOT NULL,
+    resultado            TEXT NOT NULL,
+    nivel_risco          TEXT NOT NULL,
+    ai_verdict           TEXT,
+    ai_confidence        INTEGER,
+    ai_reasons           TEXT,
+    impersonated_company TEXT,
+    official_domain      TEXT,
+    sender_domain        TEXT,
+    domain_match         INTEGER,
+    FOREIGN KEY (id_email) REFERENCES EMAILS(id_email)
+);
+		CREATE TABLE IF NOT EXISTS BLOCKED_SENDERS (
+    id_blocked    INTEGER PRIMARY KEY AUTOINCREMENT,
+    sender        TEXT NOT NULL UNIQUE,
+    blocked_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+    reason        TEXT
+);
+
 		CREATE TABLE IF NOT EXISTS LOGS (
 			id_log INTEGER PRIMARY KEY AUTOINCREMENT,
 			id_analise INTEGER NOT NULL,

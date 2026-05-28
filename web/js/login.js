@@ -7,22 +7,20 @@ const API_URL = "http://localhost:8000";
 async function handleLogin() {
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value;
+    const remember = document.getElementById('remember-me').checked;
     const errorMsg = document.getElementById('error-msg');
     const btn      = document.getElementById('login-btn');
 
-    // Reset error
     errorMsg.classList.remove('show');
 
-    // Basic validation
     if (!username || !password) {
-        errorMsg.textContent = "Please fill in all fields.";
+        errorMsg.textContent = "Por favor preenche todos os campos.";
         errorMsg.classList.add('show');
         return;
     }
 
-    // Loading state
     btn.classList.add('loading');
-    btn.textContent = "Signing in...";
+    btn.textContent = "A entrar...";
 
     try {
         const response = await fetch(`${API_URL}/auth/login`, {
@@ -34,24 +32,27 @@ async function handleLogin() {
         const data = await response.json();
 
         if (response.ok && data.success) {
-            // Save token and username in localStorage
+            // Save token
             localStorage.setItem('neap-token', data.date.token);
             localStorage.setItem('neap-user', data.date.username);
+            localStorage.setItem('neap-remember', remember ? '1' : '0');
+            if (remember) {
+        await saveSession(data.date.token, data.date.username, true);
+    }
             window.location.href = 'dashboard.html';
         } else {
-            errorMsg.textContent = data.detail || "Invalid credentials.";
+            errorMsg.textContent = data.detail || "Credenciais inválidas.";
             errorMsg.classList.add('show');
             document.getElementById('password').value = '';
         }
 
     } catch (err) {
-        errorMsg.textContent = "Cannot connect to server. Make sure the API is running.";
+        errorMsg.textContent = "Não foi possível ligar ao servidor.";
         errorMsg.classList.add('show');
     }
 
-    // Reset button
     btn.classList.remove('loading');
-    btn.textContent = "Sign in";
+    btn.textContent = "Entrar";
 }
 
 function togglePassword() {

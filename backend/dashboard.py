@@ -37,6 +37,8 @@ def verify_token(authorization: str):
     return session[1]
 
 
+
+
 # ─────────────────────────────────────────
 # STATS
 # ─────────────────────────────────────────
@@ -51,7 +53,10 @@ async def get_stats(authorization: Optional[str] = Header(None)):
     total_emails = cursor.fetchone()[0]
 
     # Total phishing
-    cursor.execute("SELECT COUNT(*) FROM ANALISES WHERE resultado = 'PHISHING'")
+    cursor.execute("""
+    SELECT COUNT(*) FROM ANALISES 
+    WHERE resultado IN ('PHISHING', 'LIKELY PHISHING', 'SUSPICIOUS')
+""")
     total_phishing = cursor.fetchone()[0]
 
     # Total legitimate
@@ -90,6 +95,16 @@ async def get_stats(authorization: Optional[str] = Header(None)):
         for row in rows
     ]
 
+    trend_phishing = "+0%"
+    trend_legit    = "+0%"
+    trend_total    = f"+{total_emails}"
+
+    if total_emails > 0:
+        phishing_pct   = round((total_phishing / total_emails) * 100)
+        legit_pct      = round((total_legit / total_emails) * 100)
+        trend_phishing = f"+{phishing_pct}%"
+        trend_legit    = f"+{legit_pct}%"
+
     conn.close()
 
     return {
@@ -100,10 +115,304 @@ async def get_stats(authorization: Optional[str] = Header(None)):
             "total_legit":    total_legit,
             "avg_score":      avg_score,
             "total_alerts":   total_alerts,
-            "recent_emails":  recent_emails
+            "recent_emails":  recent_emails,
+            "trend_total":    trend_total,
+            "trend_phishing": trend_phishing,
+            "trend_legit":    trend_legit,
         }
     }
 
+
+# ─────────────────────────────────────────
+# BLOCK SENDER
+# ─────────────────────────────────────────
+@router.post("/alerts/{id_alerta}/block")
+async def block_sender(id_alerta: int, authorization: Optional[str] = Header(None)):
+    verify_token(authorization)
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Get sender from alert → log → analysis → email
+    cursor.execute("""
+        SELECT EMAILS.remetente
+        FROM ALERTAS
+        JOIN LOGS ON ALERTAS.id_log = LOGS.id_log
+        JOIN ANALISES ON LOGS.id_analise = ANALISES.id_analise
+        JOIN EMAILS ON ANALISES.id_email = EMAILS.id_email
+        WHERE ALERTAS.id_alerta = ?
+    """, (id_alerta,))
+
+    row = cursor.fetchone()
+
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Alert not found")
+
+    sender = row[0]
+
+    # Insert into blocked senders
+    try:
+        cursor.execute("""
+            INSERT INTO BLOCKED_SENDERS (sender, reason)
+            VALUES (?, ?)
+        """, (sender, "Blocked from alert"))
+    except:
+        pass  # Already blocked
+
+    # Resolve the alert
+    cursor.execute("""
+        UPDATE ALERTAS SET estado_alerta = 'RESOLVED'
+        WHERE id_alerta = ?
+    """, (id_alerta,))
+
+    conn.commit()
+    conn.close()
+
+    return {"success": True, "message": f"Sender {sender} blocked", "sender": sender}
+
+
+# ─────────────────────────────────────────
+# GET BLOCKED SENDERS
+# ─────────────────────────────────────────
+@router.get("/blocked")
+async def get_blocked(authorization: Optional[str] = Header(None)):
+    verify_token(authorization)
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id_blocked, sender, blocked_at, reason
+        FROM BLOCKED_SENDERS
+        ORDER BY blocked_at DESC
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    blocked = [
+        {
+            "id_blocked": row[0],
+            "sender":     row[1],
+            "blocked_at": row[2],
+            "reason":     row[3]
+        }
+        for row in rows
+    ]
+
+    return {"success": True, "date": {"blocked": blocked}}
+
+
+@router.get("/export")
+async def export_logs(format: str = "csv", authorization: Optional[str] = Header(None)):
+    verify_token(authorization)
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT EMAILS.remetente, EMAILS.assunto, EMAILS.data_hora,
+               ANALISES.score, ANALISES.nivel_risco, ANALISES.resultado,
+               LOGS.spf, LOGS.dkim, LOGS.dmarc, LOGS.ip_origem
+        FROM EMAILS
+        JOIN ANALISES ON EMAILS.id_email = ANALISES.id_email
+        LEFT JOIN LOGS ON ANALISES.id_analise = LOGS.id_analise
+        ORDER BY EMAILS.data_hora DESC
+    """)
+    rows = cursor.fetchall()
+
+    # Stats
+    cursor.execute("SELECT COUNT(*) FROM EMAILS")
+    total_emails = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM ANALISES WHERE resultado IN ('PHISHING', 'LIKELY PHISHING')")
+    total_phishing = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM ANALISES WHERE resultado = 'LEGITIMATE'")
+    total_legit = cursor.fetchone()[0]
+
+    cursor.execute("SELECT AVG(score) FROM ANALISES")
+    avg = cursor.fetchone()[0]
+    avg_score = round(avg) if avg else 0
+
+    conn.close()
+
+    # ─── CSV ───
+    if format == "csv":
+        from fastapi.responses import StreamingResponse
+        import io
+        import csv
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["Remetente", "Assunto", "Data", "Score", "Risco", "Resultado", "SPF", "DKIM", "DMARC", "IP"])
+        writer.writerows(rows)
+        output.seek(0)
+
+        return StreamingResponse(
+            io.BytesIO(output.getvalue().encode()),
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=neap-relatorio.csv"}
+        )
+
+    # ─── PDF ───
+    if format == "pdf":
+        from fastapi.responses import StreamingResponse
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import cm
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT
+        from datetime import datetime
+        import io
+
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=A4,
+            rightMargin=2*cm,
+            leftMargin=2*cm,
+            topMargin=2*cm,
+            bottomMargin=2*cm
+        )
+
+        styles = getSampleStyleSheet()
+        elements = []
+
+        # ─── Title ───
+        title_style = ParagraphStyle(
+            'Title',
+            parent=styles['Title'],
+            fontSize=22,
+            textColor=colors.HexColor('#6366f1'),
+            spaceAfter=6,
+            alignment=TA_CENTER
+        )
+
+        subtitle_style = ParagraphStyle(
+            'Subtitle',
+            parent=styles['Normal'],
+            fontSize=10,
+            textColor=colors.HexColor('#6b6b6b'),
+            spaceAfter=4,
+            alignment=TA_CENTER
+        )
+
+        normal_style = ParagraphStyle(
+            'Normal',
+            parent=styles['Normal'],
+            fontSize=9,
+            textColor=colors.HexColor('#0f0f0f'),
+        )
+
+        elements.append(Paragraph("NEAP", title_style))
+        elements.append(Paragraph("Network Email Anti-Phishing", subtitle_style))
+        elements.append(Paragraph(f"Relatório gerado em {datetime.now().strftime('%d/%m/%Y às %H:%M')}", subtitle_style))
+        elements.append(Spacer(1, 0.5*cm))
+        elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#e5e5e5')))
+        elements.append(Spacer(1, 0.5*cm))
+
+        # ─── Stats ───
+        elements.append(Paragraph("Resumo Executivo", ParagraphStyle('H2', parent=styles['Heading2'], fontSize=13, textColor=colors.HexColor('#0f0f0f'), spaceAfter=8)))
+
+        stats_data = [
+            ["Métrica", "Valor"],
+            ["Total de Emails Analisados", str(total_emails)],
+            ["Emails de Phishing Detetados", str(total_phishing)],
+            ["Emails Legítimos", str(total_legit)],
+            ["Score Médio de Risco", str(avg_score)],
+            ["Taxa de Phishing", f"{round((total_phishing/total_emails)*100) if total_emails > 0 else 0}%"],
+        ]
+
+        stats_table = Table(stats_data, colWidths=[10*cm, 6*cm])
+        stats_table.setStyle(TableStyle([
+            ('BACKGROUND',   (0, 0), (-1, 0), colors.HexColor('#6366f1')),
+            ('TEXTCOLOR',    (0, 0), (-1, 0), colors.white),
+            ('FONTNAME',     (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE',     (0, 0), (-1, 0), 10),
+            ('ALIGN',        (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME',     (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE',     (0, 1), (-1, -1), 9),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#f9f9f9'), colors.white]),
+            ('GRID',         (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e5e5')),
+            ('TOPPADDING',   (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING',(0, 0), (-1, -1), 6),
+            ('LEFTPADDING',  (0, 0), (-1, -1), 8),
+        ]))
+
+        elements.append(stats_table)
+        elements.append(Spacer(1, 0.8*cm))
+
+        # ─── Email Table ───
+        elements.append(Paragraph("Detalhes dos Emails Analisados", ParagraphStyle('H2', parent=styles['Heading2'], fontSize=13, textColor=colors.HexColor('#0f0f0f'), spaceAfter=8)))
+
+        table_data = [["#", "Remetente", "Assunto", "Score", "Risco", "Resultado", "SPF", "DKIM"]]
+
+        for i, row in enumerate(rows, 1):
+            table_data.append([
+                str(i),
+                str(row[0])[:30] + "..." if len(str(row[0])) > 30 else str(row[0]),
+                str(row[1])[:35] + "..." if len(str(row[1])) > 35 else str(row[1]),
+                str(row[3]),
+                str(row[4]) or "-",
+                str(row[5]),
+                str(row[6]) or "NONE",
+                str(row[7]) or "NONE",
+            ])
+
+        col_widths = [1*cm, 4.5*cm, 5*cm, 1.5*cm, 2*cm, 2.5*cm, 1.5*cm, 1.5*cm]
+        email_table = Table(table_data, colWidths=col_widths, repeatRows=1)
+
+        email_table.setStyle(TableStyle([
+            ('BACKGROUND',   (0, 0), (-1, 0), colors.HexColor('#6366f1')),
+            ('TEXTCOLOR',    (0, 0), (-1, 0), colors.white),
+            ('FONTNAME',     (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE',     (0, 0), (-1, 0), 8),
+            ('ALIGN',        (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME',     (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE',     (0, 1), (-1, -1), 7),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#f9f9f9'), colors.white]),
+            ('GRID',         (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e5e5')),
+            ('TOPPADDING',   (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING',(0, 0), (-1, -1), 4),
+            ('LEFTPADDING',  (0, 0), (-1, -1), 4),
+        ]))
+
+        elements.append(email_table)
+        elements.append(Spacer(1, 0.8*cm))
+
+        # ─── Footer ───
+        elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#e5e5e5')))
+        elements.append(Spacer(1, 0.3*cm))
+        elements.append(Paragraph(
+            "NEAP — Network Email Anti-Phishing · CTeSP Cibersegurança · ISTEC Porto · 2025/2027",
+            ParagraphStyle('Footer', parent=styles['Normal'], fontSize=7, textColor=colors.HexColor('#a0a0a0'), alignment=TA_CENTER)
+        ))
+
+        doc.build(elements)
+        buffer.seek(0)
+
+        return StreamingResponse(
+            buffer,
+            media_type="application/pdf",
+            headers={"Content-Disposition": "attachment; filename=neap-relatorio.pdf"}
+        )
+
+    raise HTTPException(status_code=400, detail="Formato não suportado")
+
+# ─────────────────────────────────────────
+# UNBLOCK SENDER
+# ─────────────────────────────────────────
+@router.delete("/blocked/{id_blocked}")
+async def unblock_sender(id_blocked: int, authorization: Optional[str] = Header(None)):
+    verify_token(authorization)
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("DELETE FROM BLOCKED_SENDERS WHERE id_blocked = ?", (id_blocked,))
+    conn.commit()
+    conn.close()
+
+    return {"success": True, "message": "Sender unblocked"}
 
 # ─────────────────────────────────────────
 # CHART DATA
@@ -143,47 +452,45 @@ async def get_chart(period: str = "7d", authorization: Optional[str] = Header(No
         }
     }
 
+@router.get("/export/save")
+async def save_export(format: str = "pdf", authorization: Optional[str] = Header(None)):
+    import os
+    from datetime import datetime
 
+    verify_token(authorization)
+
+    try:
+        desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+        filename = f"neap-relatorio-{datetime.now().strftime('%Y%m%d-%H%M%S')}.{format}"
+        filepath = os.path.join(desktop, filename)
+
+        print(f"DEBUG desktop: {desktop}")
+        print(f"DEBUG filepath: {filepath}")
+
+        # Generate content
+        response = await export_logs(format=format, authorization=authorization)
+
+        print(f"DEBUG response type: {type(response)}")
+
+        # Read response body
+        body = b""
+        async for chunk in response.body_iterator:
+            body += chunk
+
+        print(f"DEBUG body size: {len(body)}")
+
+        with open(filepath, 'wb') as f:
+            f.write(body)
+
+        return {"success": True, "message": f"Ficheiro guardado!", "path": filepath}
+
+    except Exception as e:
+        print(f"DEBUG error: {e}")
+        return {"success": False, "message": str(e)}
 # ─────────────────────────────────────────
 # EXPORT
 # ─────────────────────────────────────────
-@router.get("/export")
-async def export_logs(format: str = "csv", authorization: Optional[str] = Header(None)):
-    verify_token(authorization)
-    conn = get_connection()
-    cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT EMAILS.remetente, EMAILS.assunto, EMAILS.data_hora,
-               ANALISES.score, ANALISES.nivel_risco, ANALISES.resultado,
-               LOGS.spf, LOGS.dkim, LOGS.dmarc, LOGS.ip_origem
-        FROM EMAILS
-        JOIN ANALISES ON EMAILS.id_email = ANALISES.id_email
-        LEFT JOIN LOGS ON ANALISES.id_analise = LOGS.id_analise
-        ORDER BY EMAILS.data_hora DESC
-    """)
-
-    rows = cursor.fetchall()
-    conn.close()
-
-    if format == "csv":
-        from fastapi.responses import StreamingResponse
-        import io
-        import csv
-
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(["Sender","Subject","Date","Score","Risk","Result","SPF","DKIM","DMARC","IP"])
-        writer.writerows(rows)
-        output.seek(0)
-
-        return StreamingResponse(
-            io.BytesIO(output.getvalue().encode()),
-            media_type="text/csv",
-            headers={"Content-Disposition": "attachment; filename=neap-logs.csv"}
-        )
-
-    raise HTTPException(status_code=400, detail="Format not supported yet")
 
 # Adiciona estes endpoints ao backend/dashboard.py
 

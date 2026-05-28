@@ -87,6 +87,7 @@
             </div>
         </div>
         <div class="topbar-right">
+            <button class="btn btn-secondary" onclick="showImapForm()">📥 IMAP Auto</button>
             <button class="btn btn-primary" onclick="showAnalyzeForm()">+ Analyze Email</button>
         </div>
     </header>
@@ -150,8 +151,57 @@
             </div>
         </div>
 
+	<!-- ─── IMAP Form ─── -->
+<div class="card imap-form" id="imap-form">
+    <div class="card-header">
+        <h3>Auto Analyze via IMAP</h3>
+        <button class="close-btn" onclick="hideImapForm()">✕</button>
+    </div>
+
+    <p class="text-muted text-sm mb-16">
+        Connect your email account to automatically fetch and analyze your inbox.
+    </p>
+
+    <div class="form-grid">
+        <div class="input-group">
+            <label>Email Address</label>
+            <input class="input" type="email" id="imap-email" placeholder="your@gmail.com"/>
+        </div>
+        <div class="input-group">
+            <label>Password / App Password</label>
+            <div class="input-wrapper">
+                <input class="input" type="password" id="imap-password" placeholder="App password"/>
+                <span class="input-icon" onclick="toggleImapPassword()">👁</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="input-group mt-16">
+        <label>Number of emails to fetch</label>
+        <select class="input" id="imap-limit">
+            <option value="10">Last 10 emails</option>
+            <option value="20" selected>Last 20 emails</option>
+            <option value="50">Last 50 emails</option>
+        </select>
+    </div>
+
+    <div class="imap-warning mt-16">
+        ⚠️ For Gmail use an <strong>App Password</strong> — 
+        <a href="https://myaccount.google.com/apppasswords" target="_blank">generate here</a>
+    </div>
+
+    <div class="form-actions mt-16">
+        <button class="btn btn-secondary" onclick="hideImapForm()">Cancel</button>
+        <button class="btn btn-primary" id="imap-btn" onclick="handleImap()">
+            Fetch & Analyze
+        </button>
+    </div>
+</div>
+
+
         <!-- ─── Result Card ─── -->
-        <div class="card result-card" id="result-card">
+        
+	<div class="card result-card" id="result-card">
             <div class="result-header">
                 <div class="result-icon" id="result-icon">?</div>
                 <div>
@@ -186,6 +236,7 @@
                             <th>Risk</th>
                             <th>Result</th>
                             <th>Date</th>
+                            <th>AI</th>
                         </tr>
                     </thead>
                     <tbody id="emails-body">

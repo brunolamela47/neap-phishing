@@ -1,3 +1,15 @@
+# ─── Trusted Domains Whitelist ───
+TRUSTED_DOMAINS = [
+    "google.com", "gmail.com", "googlemail.com",
+    "microsoft.com", "outlook.com", "hotmail.com",
+    "apple.com", "icloud.com",
+    "amazon.com", "paypal.com",
+    "facebook.com", "instagram.com",
+    "linkedin.com", "twitter.com",
+    "gov.pt", "at.gov.pt", "sns.gov.pt",
+]
+
+
 SUSPICIOUS_KEYWORDS = [
     # Urgency language
     "urgent", "immediately", "action required", "act now",
@@ -87,6 +99,13 @@ def run_heuristic_analysis(sender,subject,body):
 		"url_analysis": url_analysis,
 		"total_heuristic_score": min(total_score, 100)
 	}
+ 
+def is_trusted_sender(sender: str) -> bool:
+    sender_lower = sender.lower()
+    for domain in TRUSTED_DOMAINS:
+        if f"@{domain}" in sender_lower or f".{domain}" in sender_lower:
+            return True
+    return False
 
 if __name__ == "__main__":
 	result = run_heuristic_analysis(

@@ -139,5 +139,50 @@
     <p class="version">v1.0.0 · CTeSP Cibersegurança · ISTEC Porto</p>
 
     <script src="js/app.js"></script>
+<script>
+    const API_URL = "http://localhost:8000";
+
+async function checkAutoLogin() {
+    console.log('checkAutoLogin started');
+    
+    // Wait for API
+    for (let i = 0; i < 10; i++) {
+        try {
+            await fetch("http://localhost:8000/");
+            console.log('API is ready');
+            break;
+        } catch {
+            console.log(`Waiting for API... attempt ${i+1}`);
+            await new Promise(r => setTimeout(r, 500));
+        }
+    }
+
+    console.log('Trying loadSavedSession...');
+    const loaded = await loadSavedSession();
+    console.log('loadSavedSession result:', loaded);
+    
+    if (!loaded) return;
+
+    const token = localStorage.getItem('neap-token');
+    console.log('token:', token ? 'exists' : 'missing');
+    if (!token) return;
+
+    try {
+        const response = await fetch("http://localhost:8000/auth/check", {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        console.log('auth/check status:', response.status);
+
+        if (response.ok) {
+            window.location.href = 'pages/dashboard.html';
+        }
+    } catch (err) {
+        console.log('Auto login failed:', err);
+    }
+}
+
+checkAutoLogin();
+</script>
 </body>
 </html>

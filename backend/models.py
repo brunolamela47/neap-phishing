@@ -28,3 +28,7 @@ class ResponseModel(BaseModel):
 	date: Optional[dict] = None
 
 
+class IMAPModel(BaseModel):
+	email: EmailStr
+	password: str
+	limit: Optional[int] = 20
