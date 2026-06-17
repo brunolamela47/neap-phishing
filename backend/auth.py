@@ -9,12 +9,71 @@ import json
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from backend.models import RegisterModel, LoginModel, ResponseModel
+from backend.models import RegisterModel, LoginModel, ResponseModel, ChangePasswordModel
 from database.database import get_connection
 
 SESSION_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".session")
 
 router = APIRouter()
+
+
+THEME_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".neap_theme")
+
+@router.post("/theme")
+async def save_theme(data: dict):
+    try:
+        with open(THEME_FILE, 'w') as f:
+            f.write(data.get("theme", "light"))
+        return {"success": True}
+    except Exception as e:
+        return {"success": False}
+
+@router.get("/theme")
+async def load_theme():
+    try:
+        if os.path.exists(THEME_FILE):
+            with open(THEME_FILE, 'r') as f:
+                return {"success": True, "theme": f.read().strip()}
+    except:
+        pass
+    return {"success": True, "theme": "light"}
+
+def verify_token_username(authorization: str) -> str:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid token")
+    token = authorization.split(" ")[1]
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT USERS.username FROM SESSIONS
+        JOIN USERS ON SESSIONS.id_user = USERS.id_user
+        WHERE SESSIONS.token = ?
+    """, (token,))
+    session = cursor.fetchone()
+    conn.close()
+    if not session:
+        raise HTTPException(status_code=401, detail="Invalid session")
+    return session[0]
+
+@router.post("/change-password", response_model=ResponseModel)
+async def change_password(data: ChangePasswordModel, authorization: Optional[str] = Header(None)):
+    username = verify_token_username(authorization)
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT password FROM USERS WHERE username = ?", (username,))
+    user = cursor.fetchone()
+
+    if not user or user[0] != hash_password(data.current_password):
+        conn.close()
+        raise HTTPException(status_code=400, detail="Password atual incorreta")
+
+    cursor.execute("UPDATE USERS SET password = ? WHERE username = ?",
+                   (hash_password(data.new_password), username))
+    conn.commit()
+    conn.close()
+
+    return ResponseModel(success=True, message="Password alterada com sucesso")
 
 @router.post("/save-session")
 async def save_session(data: dict):

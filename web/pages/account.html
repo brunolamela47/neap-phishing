@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="pt" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEAP — Conta</title>
+    <script>
+        (function() {
+            var theme = localStorage.getItem('neap-theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/dashboard.css">
+    <link rel="stylesheet" href="../css/account.css">
+</head>
+<body>
+
+<!-- ─── Sidebar ─── -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <div class="sidebar-logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+        </div>
+        <span class="sidebar-title">NEAP</span>
+        <button class="sidebar-collapse" onclick="toggleSidebar()">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+                <path d="M15 18l-6-6 6-6"/>
+            </svg>
+        </button>
+    </div>
+    <nav class="sidebar-nav">
+        <a href="dashboard.html" class="nav-item">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            <span class="nav-label">Dashboard</span>
+        </a>
+        <a href="emails.html" class="nav-item">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            <span class="nav-label">Emails</span>
+        </a>
+        <a href="analises.html" class="nav-item">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            <span class="nav-label">Análises</span>
+        </a>
+        <a href="logs.html" class="nav-item">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <span class="nav-label">Logs</span>
+        </a>
+        <a href="alerts.html" class="nav-item">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+            <span class="nav-label">Alertas</span>
+        </a>
+        <!-- <a href="map.html" class="nav-item">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="2" y1="12" x2="22" y2="12"/>
+        <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
+    </svg>
+    <span class="nav-label">Mapa</span>
+</a> -->
+        <div class="nav-divider"></div>
+        <a href="account.html" class="nav-item active">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+            </svg>
+            <span class="nav-label">Conta</span>
+        </a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="sidebar-user">
+            <div class="user-avatar" id="user-avatar">A</div>
+            <span class="user-name" id="user-name">Admin</span>
+        </div>
+        <button class="logout-btn" onclick="handleLogout()" title="Terminar sessão">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" width="18" height="18"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+    </div>
+</aside>
+
+<!-- ─── Main ─── -->
+<main class="main-content" id="main-content">
+
+    <header class="topbar">
+        <div class="topbar-left">
+            <button class="menu-toggle" onclick="toggleSidebar()">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" width="20" height="20"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+            <div>
+                <h2 class="page-title">Conta</h2>
+                <p class="page-subtitle">Gerir perfil e configurações</p>
+            </div>
+        </div>
+    </header>
+
+    <div class="content-wrapper">
+        <div class="account-grid">
+
+            <!-- ─── Profile Card ─── -->
+            <div class="card account-card">
+                <div class="account-card-header">
+                    <div class="account-avatar" id="account-avatar">A</div>
+                    <div>
+                        <h3 id="account-username">—</h3>
+                        <p class="text-muted text-sm" id="account-email">—</p>
+                    </div>
+                </div>
+                <div class="account-stats">
+                    <div class="account-stat">
+                        <span class="account-stat-value" id="stat-emails">0</span>
+                        <span class="account-stat-label">Emails</span>
+                    </div>
+                    <div class="account-stat">
+                        <span class="account-stat-value" id="stat-phishing">0</span>
+                        <span class="account-stat-label">Phishing</span>
+                    </div>
+                    <div class="account-stat">
+                        <span class="account-stat-value" id="stat-blocked">0</span>
+                        <span class="account-stat-label">Bloqueados</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ─── Change Password ─── -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>Alterar Password</h3>
+                </div>
+                <div class="form-col">
+                    <div class="input-group">
+                        <label>Password Atual</label>
+                        <input class="input" type="password" id="current-password" placeholder="Password atual"/>
+                    </div>
+                    <div class="input-group">
+                        <label>Nova Password</label>
+                        <input class="input" type="password" id="new-password" placeholder="Nova password"/>
+                    </div>
+                    <div class="input-group">
+                        <label>Confirmar Nova Password</label>
+                        <input class="input" type="password" id="confirm-password" placeholder="Confirmar password"/>
+                    </div>
+                    <div id="password-msg" class="account-msg"></div>
+                    <button class="btn btn-primary" onclick="changePassword()">Alterar Password</button>
+                </div>
+            </div>
+
+            <!-- ─── IMAP Settings ─── -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>Configurações IMAP</h3>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="auto-check-toggle" onchange="toggleAutoCheck()"/>
+                        <label for="auto-check-toggle"></label>
+                        <span class="text-sm text-muted">Auto Check</span>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <div class="input-group">
+                        <label>Email IMAP</label>
+                        <input class="input" type="email" id="imap-email-setting" placeholder="email@gmail.com"/>
+                    </div>
+                    <div class="input-group">
+                        <label>App Password</label>
+                        <input class="input" type="password" id="imap-password-setting" placeholder="App password"/>
+                    </div>
+                    <div class="input-group">
+                        <label>Intervalo de verificação</label>
+                        <select class="input" id="imap-interval">
+                            <option value="1">1 minuto</option>
+                            <option value="5">5 minutos</option>
+                            <option value="15">15 minutos</option>
+                            <option value="30" selected>30 minutos</option>
+                            <option value="60">1 hora</option>
+                            <option value="120">2 horas</option>
+                        </select>
+                    </div>
+                    <div id="imap-msg" class="account-msg"></div>
+                    <button class="btn btn-primary" onclick="saveImapSettings()">Guardar Configurações</button>
+                </div>
+            </div>
+
+            <!-- ─── Blocked Senders ─── -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>Remetentes Bloqueados</h3>
+                    <span class="badge badge-critical" id="blocked-count">0</span>
+                </div>
+                <div id="blocked-list">
+                    <div class="empty-blocked">
+                        <p class="text-muted text-sm">Nenhum remetente bloqueado</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ─── Preferências ─── -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>Preferências</h3>
+                </div>
+                <div class="form-col">
+
+                    <!-- Dark Mode -->
+                    <div class="pref-row">
+                        <div>
+                            <div class="fw-500">Tema Escuro</div>
+                            <div class="text-sm text-muted">Alternar entre tema claro e escuro</div>
+                        </div>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="theme-toggle-check" onchange="handleThemeToggle()"/>
+                            <label for="theme-toggle-check"></label>
+                        </div>
+                    </div>
+
+                    <div class="nav-divider"></div>
+
+                    <!-- Export PDF -->
+                    <div class="pref-row">
+                        <div>
+                            <div class="fw-500">Exportar Relatório</div>
+                            <div class="text-sm text-muted">Gerar relatório completo em PDF</div>
+                        </div>
+                        <button class="btn btn-primary" onclick="exportPDF()">
+                            📄 Gerar PDF
+                        </button>
+                    </div>
+
+                    <!-- Export CSV -->
+                    <div class="pref-row">
+                        <div>
+                            <div class="fw-500">Exportar Logs</div>
+                            <div class="text-sm text-muted">Exportar todos os logs em CSV</div>
+                        </div>
+                        <button class="btn btn-secondary" onclick="exportCSV()">
+                            📊 Exportar CSV
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+            <!-- ─── Webhooks ─── -->
+<div class="card">
+    <div class="card-header">
+        <h3>Webhooks</h3>
+        <span class="text-sm text-muted">Alertas no telemóvel</span>
+    </div>
+    <div class="form-col">
+
+        <div class="input-group">
+            <label>Discord Webhook URL</label>
+            <input class="input" type="text" id="discord-url" placeholder="https://discord.com/api/webhooks/..."/>
+        </div>
+
+        <div class="input-group">
+            <label>Slack Webhook URL</label>
+            <input class="input" type="text" id="slack-url" placeholder="https://hooks.slack.com/services/..."/>
+        </div>
+
+        <div class="input-group">
+            <label>Telegram Bot Token</label>
+            <input class="input" type="text" id="telegram-token" placeholder="1234567890:AAF..."/>
+        </div>
+
+        <div class="input-group">
+            <label>Telegram Chat ID</label>
+            <input class="input" type="text" id="telegram-chat-id" placeholder="-1001234567890"/>
+        </div>
+
+        <div id="webhook-msg" class="account-msg"></div>
+
+        <div class="pref-row">
+            <button class="btn btn-secondary" onclick="testWebhook()">🔔 Testar</button>
+            <button class="btn btn-primary" onclick="saveWebhooks()">Guardar Webhooks</button>
+        </div>
+
+    </div>
+</div>
+        </div>
+    </div>
+</main>
+
+<script src="../js/app.js"></script>
+<script src="../js/account.js"></script>
+</body>
+</html>

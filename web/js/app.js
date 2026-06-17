@@ -1,18 +1,42 @@
 function toggleTheme() {
-    const html = document.documentElement;
-    const icon = document.getElementById('theme-icon');
+    const html    = document.documentElement;
+    const icon    = document.getElementById('theme-icon');
     const current = html.getAttribute('data-theme');
+    const newTheme = current === 'dark' ? 'light' : 'dark';
 
-    if (current === 'dark') {
-        html.setAttribute('data-theme', 'light');
-        localStorage.setItem('neap-theme', 'light');
-        if (icon) icon.textContent = '🌙';
-    } else {
-        html.setAttribute('data-theme', 'dark');
-        localStorage.setItem('neap-theme', 'dark');
-        if (icon) icon.textContent = '☀️';
-    }
+    html.setAttribute('data-theme', newTheme);
+    localStorage.setItem('neap-theme', newTheme);
+    if (icon) icon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+
+    // Save to file
+    fetch('http://localhost:8000/auth/theme', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ theme: newTheme })
+    }).catch(() => {});
 }
+
+// Apply saved theme on page load
+(async function () {
+    // Try load from file first
+    try {
+        const response = await fetch('http://localhost:8000/auth/theme');
+        const data = await response.json();
+        if (data.success) {
+            document.documentElement.setAttribute('data-theme', data.theme);
+            localStorage.setItem('neap-theme', data.theme);
+            const icon = document.getElementById('theme-icon');
+            if (icon) icon.textContent = data.theme === 'dark' ? '☀️' : '🌙';
+            return;
+        }
+    } catch {}
+
+    // Fallback to localStorage
+    const saved = localStorage.getItem('neap-theme') || 'light';
+    document.documentElement.setAttribute('data-theme', saved);
+    const icon = document.getElementById('theme-icon');
+    if (icon) icon.textContent = saved === 'dark' ? '☀️' : '🌙';
+})();
 
 // ─── Token Storage ───
 // PyWebView file:// doesn't always persist localStorage
@@ -46,9 +70,3 @@ async function loadSavedSession() {
     return false;
 }
 // Apply saved theme on page load
-(function () {
-    const saved = localStorage.getItem('neap-theme') || 'light';
-    document.documentElement.setAttribute('data-theme', saved);
-    const icon = document.getElementById('theme-icon');
-    if (icon) icon.textContent = saved === 'dark' ? '☀️' : '🌙';
-})();

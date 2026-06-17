@@ -1,14 +1,12 @@
 # ─── Trusted Domains Whitelist ───
 TRUSTED_DOMAINS = [
-    "google.com", "gmail.com", "googlemail.com",
-    "microsoft.com", "outlook.com", "hotmail.com",
+    "google.com", "googlemail.com",
+    "microsoft.com",
     "apple.com", "icloud.com",
-    "amazon.com", "paypal.com",
-    "facebook.com", "instagram.com",
+    "amazon.com",
     "linkedin.com", "twitter.com",
     "gov.pt", "at.gov.pt", "sns.gov.pt",
 ]
-
 
 SUSPICIOUS_KEYWORDS = [
     # Urgency language

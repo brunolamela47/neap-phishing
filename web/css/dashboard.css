@@ -11,6 +11,54 @@ body {
     overflow: hidden;
 }
 
+.main-content {
+    margin-left: 240px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    transition: margin-left 0.25s ease;
+    overflow-y: auto;  /* ← adiciona isto */
+    height: 100vh;     /* ← adiciona isto */
+}
+
+/* ─── Live Alert ─── */
+.live-alert {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    animation: slideIn 0.3s ease;
+}
+
+.live-alert-content {
+    background: #ef444415;
+    border: 1px solid #ef4444;
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 320px;
+    box-shadow: var(--shadow-lg);
+}
+
+.live-alert-icon { font-size: 1.5rem; }
+
+.live-alert-content button {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100px); opacity: 0; }
+    to   { transform: translateX(0);     opacity: 1; }
+}
+
 /* ─── Sidebar ─── */
 .sidebar {
     width: 240px;

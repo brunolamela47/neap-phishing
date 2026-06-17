@@ -347,3 +347,54 @@
     position: relative;
     margin: auto;
 }
+
+/* ─── VirusTotal ─── */
+.modal-vt-section {
+    margin-bottom: 16px;
+}
+
+.btn-vt {
+    width: 100%;
+    padding: 10px;
+    background: #1a1a2e;
+    color: #4fc3f7;
+    border: 1px solid #4fc3f7;
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: var(--transition);
+    margin-bottom: 12px;
+}
+
+.btn-vt:hover { background: #4fc3f720; }
+.btn-vt:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.vt-url-result {
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    font-size: 0.82rem;
+}
+
+.vt-malicious  { background: #ef444415; border: 1px solid #ef444430; }
+.vt-suspicious { background: #f59e0b15; border: 1px solid #f59e0b30; }
+.vt-clean      { background: #10b98115; border: 1px solid #10b98130; }
+
+.vt-url-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.vt-verdict { font-weight: 600; }
+.vt-stats   { color: var(--text-muted); margin-left: auto; }
+.vt-url-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    word-break: break-all;
+}
+
+.vt-empty { color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 8px; }

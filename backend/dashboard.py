@@ -7,6 +7,8 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from backend.webhooks import send_webhooks
+
 from database.database import get_connection
 
 router = APIRouter()
@@ -38,6 +40,161 @@ def verify_token(authorization: str):
 
 
 
+
+
+# ─────────────────────────────────────────
+# SAVE WEBHOOK SETTINGS
+# ─────────────────────────────────────────
+@router.post("/webhooks")
+async def save_webhooks(data: dict, authorization: Optional[str] = Header(None)):
+    username = verify_token(authorization)
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id_user FROM USERS WHERE username = ?", (username,))
+    user = cursor.fetchone()
+    if not user:
+        conn.close()
+        raise HTTPException(status_code=404, detail="User not found")
+
+    id_user = user[0]
+
+    cursor.execute("SELECT id_webhook FROM WEBHOOK_SETTINGS WHERE id_user = ?", (id_user,))
+    existing = cursor.fetchone()
+
+    if existing:
+        cursor.execute("""
+            UPDATE WEBHOOK_SETTINGS
+            SET discord_url = ?, slack_url = ?, telegram_token = ?, telegram_chat_id = ?, active = ?
+            WHERE id_user = ?
+        """, (
+            data.get("discord_url"),
+            data.get("slack_url"),
+            data.get("telegram_token"),
+            data.get("telegram_chat_id"),
+            1,
+            id_user
+        ))
+    else:
+        cursor.execute("""
+            INSERT INTO WEBHOOK_SETTINGS (id_user, discord_url, slack_url, telegram_token, telegram_chat_id)
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            id_user,
+            data.get("discord_url"),
+            data.get("slack_url"),
+            data.get("telegram_token"),
+            data.get("telegram_chat_id")
+        ))
+
+    conn.commit()
+    conn.close()
+
+    return {"success": True, "message": "Webhooks guardados"}
+
+
+# ─────────────────────────────────────────
+# LOAD WEBHOOK SETTINGS
+# ─────────────────────────────────────────
+@router.get("/webhooks")
+async def load_webhooks(authorization: Optional[str] = Header(None)):
+    username = verify_token(authorization)
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id_user FROM USERS WHERE username = ?", (username,))
+    user = cursor.fetchone()
+    if not user:
+        conn.close()
+        return {"success": False}
+
+    cursor.execute("""
+        SELECT discord_url, slack_url, telegram_token, telegram_chat_id, active
+        FROM WEBHOOK_SETTINGS WHERE id_user = ?
+    """, (user[0],))
+
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row:
+        return {"success": False, "date": {}}
+
+    return {"success": True, "date": {
+        "discord_url":       row[0],
+        "slack_url":         row[1],
+        "telegram_token":    row[2],
+        "telegram_chat_id":  row[3],
+        "active":            bool(row[4])
+    }}
+
+
+# ─────────────────────────────────────────
+# TEST WEBHOOK
+# ─────────────────────────────────────────
+@router.post("/webhooks/test")
+async def test_webhook(data: dict, authorization: Optional[str] = Header(None)):
+    verify_token(authorization)
+
+    test_email = {
+        "remetente":  "seguranca@caixageral-bancos.tk",
+        "assunto":    "URGENTE: Conta bloqueada — Teste NEAP",
+        "score":      95,
+        "nivel_risco": "CRITICAL",
+        "resultado":  "PHISHING",
+        "data_hora":  ""
+    }
+
+    results = await send_webhooks(test_email, data)
+    return {"success": True, "results": results}
+
+
+# ─────────────────────────────────────────
+# ATTACK MAP DATA
+# ─────────────────────────────────────────
+@router.get("/map")
+async def get_attack_map(authorization: Optional[str] = Header(None)):
+    verify_token(authorization)
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Get all phishing emails with IP
+    cursor.execute("""
+        SELECT LOGS.ip_origem, COUNT(*) as total,
+               ANALISES.nivel_risco
+        FROM LOGS
+        JOIN ANALISES ON LOGS.id_analise = ANALISES.id_analise
+        WHERE LOGS.ip_origem IS NOT NULL
+        AND ANALISES.nivel_risco IN ('HIGH', 'CRITICAL')
+        GROUP BY LOGS.ip_origem
+        ORDER BY total DESC
+        LIMIT 50
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    from backend.geoip import geolocate_ip
+    attacks = []
+
+    for row in rows:
+        ip    = row[0]
+        count = row[1]
+        nivel = row[2]
+
+        geo = geolocate_ip(ip)
+        if geo.get("lat") and geo.get("lon"):
+            attacks.append({
+                "ip":      ip,
+                "count":   count,
+                "nivel":   nivel,
+                "country": geo.get("country"),
+                "city":    geo.get("city"),
+                "lat":     geo.get("lat"),
+                "lon":     geo.get("lon"),
+                "isp":     geo.get("isp")
+            })
+
+    return {"success": True, "date": {"attacks": attacks}}
 
 # ─────────────────────────────────────────
 # STATS

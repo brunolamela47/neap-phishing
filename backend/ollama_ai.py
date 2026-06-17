@@ -17,31 +17,59 @@ def analyze_with_ai(sender: str, subject: str, body: str) -> dict:
 
 IMPORTANTE: Responde SEMPRE em português de Portugal.
 
-Analisa este email e faz o seguinte:
+Aqui estão exemplos para te guiar:
 
-1. Identifica que empresa/entidade está a ser impersonada (ex: Caixa Geral de Depósitos, PayPal, etc.)
-2. Com base no teu conhecimento, qual é o domínio oficial de email dessa empresa?
-3. Compara o remetente real com o domínio oficial — são iguais?
-4. Se o domínio do remetente NÃO corresponde ao oficial, aumenta significativamente a suspeita de phishing.
+EXEMPLO 1 - LEGITIMATE:
+Remetente: joao@empresa.pt
+Assunto: Reunião amanhã
+Corpo: Olá, a reunião de amanhã foi adiada para as 15h. Cumprimentos.
+→ verdict: LEGITIMATE, confidence: 95
+→ Razão: Conteúdo normal, sem pedidos suspeitos
 
-Detalhes do email:
+EXEMPLO 2 - LEGITIMATE:
+Remetente: noreply@gmail.com
+Assunto: Teste
+Corpo: teste
+→ verdict: LEGITIMATE, confidence: 90
+→ Razão: Corpo simples sem indicadores de phishing
+
+EXEMPLO 3 - PHISHING:
+Remetente: seguranca@caixageral-bancos.tk
+Assunto: URGENTE: Conta bloqueada
+Corpo: A sua conta foi bloqueada. Clique aqui para verificar: http://caixa-login.tk. Introduza a sua palavra-passe.
+→ verdict: PHISHING, confidence: 98
+→ Razão: Pedido de credenciais, URL suspeito, domínio falso
+
+EXEMPLO 4 - PHISHING:
+Remetente: premio@ganhouagora.ga
+Assunto: Parabéns! Ganhou 5000€
+Corpo: Foi selecionado para receber 5000€. Clique aqui e introduza os seus dados bancários para receber o prémio.
+→ verdict: PHISHING, confidence: 99
+→ Razão: Oferta falsa de prémio, pedido de dados bancários
+
+─────────────────────────
+
+Agora analisa este email:
 - Remetente: {sender}
 - Assunto: {subject}
 - Corpo: {body[:500]}
 
-Responde APENAS neste formato JSON exato em português, sem mais nada:
+Regras:
+- Se o corpo for simples (teste, olá, reunião, etc.) → LEGITIMATE
+- Só PHISHING se houver: pedidos de password/dados bancários, URLs suspeitos, urgência excessiva, prémios falsos
+- O domínio diferente NÃO é suficiente para ser phishing sozinho
+
+Responde APENAS neste formato JSON em português, sem mais nada:
 {{
     "verdict": "PHISHING" ou "LEGITIMATE",
     "confidence": número entre 0 e 100,
-    "impersonated_company": "nome da empresa impersonada ou null",
-    "official_domain": "domínio oficial da empresa ou null",
+    "impersonated_company": "nome da empresa ou null",
+    "official_domain": "domínio oficial ou null",
     "sender_domain": "domínio do remetente",
     "domain_match": true ou false,
     "reasons": ["razão em português 1", "razão em português 2"],
     "risk_indicators": ["indicador em português 1"]
-}}
-
-LEMBRA-TE: Se o domínio do remetente não corresponder ao domínio oficial da empresa, isso é um forte indicador de phishing."""
+}}"""
 
     payload = {
         "model": MODEL,

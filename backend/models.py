@@ -13,7 +13,10 @@ class LoginModel(BaseModel):
 	username: str
 	password: str
 
-
+class ChangePasswordModel(BaseModel):
+    current_password: str
+    new_password: str
+    
 class EmailAnalyzeModel(BaseModel):
 	remetente: str
 	assunto: str
@@ -29,6 +32,8 @@ class ResponseModel(BaseModel):
 
 
 class IMAPModel(BaseModel):
-	email: EmailStr
-	password: str
-	limit: Optional[int] = 20
+    email: EmailStr
+    password: str
+    limit: Optional[int] = 20
+    interval: Optional[int] = 30
+    auto_check: Optional[int] = 1

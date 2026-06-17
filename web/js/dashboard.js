@@ -5,7 +5,7 @@
 const API_URL = "http://localhost:8000";
 let emailChart = null;
 let riskChart = null;
-
+let ws = null;
 // ─── Auth Check ───
 function checkAuth() {
     const token = localStorage.getItem('neap-token');
@@ -14,6 +14,63 @@ function checkAuth() {
         return null;
     }
     return token;
+}
+
+function connectWebSocket() {
+    ws = new WebSocket('ws://localhost:8000/ws');
+
+    ws.onopen = () => {
+        console.log('WebSocket connected');
+        updateLiveIndicator(true);
+    };
+
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        if (data.type === 'phishing_alert') {
+            // Flash dashboard
+            showLiveAlert(data);
+            // Refresh stats
+            loadStats();
+        }
+    };
+
+    ws.onclose = () => {
+        console.log('WebSocket disconnected — reconnecting...');
+        updateLiveIndicator(false);
+        setTimeout(connectWebSocket, 3000); // Reconnect after 3s
+    };
+
+    ws.onerror = (err) => {
+        console.error('WebSocket error:', err);
+    };
+}
+
+function showLiveAlert(data) {
+    // Create flash notification on dashboard
+    const alert = document.createElement('div');
+    alert.className = 'live-alert';
+    alert.innerHTML = `
+        <div class="live-alert-content">
+            <span class="live-alert-icon">🚨</span>
+            <div>
+                <strong>Phishing Detetado — ${data.nivel}</strong>
+                <div class="text-sm">De: ${data.remetente} · Score: ${data.score}/100</div>
+            </div>
+            <button onclick="this.parentElement.parentElement.remove()">✕</button>
+        </div>
+    `;
+    document.body.appendChild(alert);
+
+    // Auto remove after 5 seconds
+    setTimeout(() => alert.remove(), 5000);
+}
+
+function updateLiveIndicator(connected) {
+    const dot = document.querySelector('.live-dot');
+    if (dot) {
+        dot.style.background = connected ? '#10b981' : '#ef4444';
+    }
 }
 
 // ─── Load User ───
@@ -298,6 +355,8 @@ async function handleLogout() {
 document.addEventListener('DOMContentLoaded', () => {
     loadUser();
     loadDashboard();
+    connectWebSocket();
+    setInterval(loadStats, 30000);
     loadChartData('7d');
     renderRiskChart(0, 0, 0, 0);
 

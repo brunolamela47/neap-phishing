@@ -22,11 +22,6 @@ function toggleSidebar() {
     document.getElementById('main-content').classList.toggle('expanded');
 }
 
-function toggleSettings() {
-    document.getElementById('settings-submenu').classList.toggle('open');
-    document.getElementById('settings-chevron').classList.toggle('open');
-}
-
 function handleLogout() {
     localStorage.removeItem('neap-token');
     localStorage.removeItem('neap-user');
@@ -43,6 +38,27 @@ function hideAnalyzeForm() {
     document.getElementById('result-card').classList.remove('show');
 }
 
+// ─── Load IMAP Credentials ───
+async function loadImapCredentials() {
+    const token = checkAuth();
+    if (!token) return;
+
+    try {
+        const response = await fetch(`${API_URL}/emails/imap/credentials`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.date) {
+            document.getElementById('imap-email').value    = data.date.email    || '';
+            document.getElementById('imap-password').value = data.date.password || '';
+        }
+    } catch (err) {
+        console.error('Load IMAP credentials error:', err);
+    }
+}
+
 // ─── Analyze ───
 async function handleAnalyze() {
     const token   = checkAuth();
@@ -55,11 +71,11 @@ async function handleAnalyze() {
     const btn     = document.getElementById('analyze-btn');
 
     if (!sender || !subject || !body) {
-        alert('Please fill in all required fields.');
+        alert('Por favor preenche todos os campos obrigatórios.');
         return;
     }
 
-    btn.textContent = 'Analyzing...';
+    btn.textContent = 'A analisar...';
     btn.classList.add('loading');
 
     try {
@@ -77,6 +93,7 @@ async function handleAnalyze() {
         if (response.ok && data.success) {
             showResult(data.date);
             showAIModal({
+                id_email:        data.date.id_email || null,
                 final_score:     data.date.final_score,
                 risk_level:      data.date.risk_level,
                 result:          data.date.result,
@@ -87,14 +104,14 @@ async function handleAnalyze() {
             });
             loadEmails();
         } else {
-            alert(data.detail || 'Analysis failed.');
+            alert(data.detail || 'Análise falhou.');
         }
 
     } catch (err) {
-        alert('Cannot connect to server.');
+        alert('Não foi possível ligar ao servidor.');
     }
 
-    btn.textContent = 'Analyze Email';
+    btn.textContent = 'Analisar Email';
     btn.classList.remove('loading');
 }
 
@@ -217,6 +234,7 @@ async function loadAIModal(id_email) {
             const risk_level = d.nivel_risco || resultToRisk[d.resultado] || 'MEDIUM';
 
             showAIModal({
+                id_email,
                 final_score:     d.score || 0,
                 risk_level:      risk_level,
                 result:          d.resultado || 'UNKNOWN',
@@ -279,6 +297,7 @@ function formatDate(dateStr) {
 function showImapForm() {
     document.getElementById('imap-form').classList.add('show');
     document.getElementById('analyze-form').classList.remove('show');
+    loadImapCredentials();
 }
 
 function hideImapForm() {
@@ -306,6 +325,15 @@ async function handleImap() {
     btn.classList.add('loading');
 
     try {
+        await fetch(`${API_URL}/emails/imap/credentials`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ email, password, limit: parseInt(limit) })
+        });
+
         const response = await fetch(`${API_URL}/emails/imap`, {
             method: 'POST',
             headers: {
@@ -333,6 +361,46 @@ async function handleImap() {
     btn.classList.remove('loading');
 }
 
+// ─── VirusTotal Scan ───
+async function scanVirusTotal(id_email, btn) {
+    const token = checkAuth();
+    if (!token) return;
+
+    btn.textContent = '⏳ A verificar...';
+    btn.disabled = true;
+
+    try {
+        const response = await fetch(`${API_URL}/emails/${id_email}/virustotal`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await response.json();
+        const container = document.getElementById(`vt-results-${id_email}`);
+
+        if (data.success) {
+            if (data.date.count === 0) {
+                container.innerHTML = `<div class="vt-empty">Nenhum URL encontrado no email.</div>`;
+            } else {
+                container.innerHTML = data.date.urls.map(url => `
+                    <div class="vt-url-result ${url.verdict === 'MALICIOUS' ? 'vt-malicious' : url.verdict === 'SUSPICIOUS' ? 'vt-suspicious' : 'vt-clean'}">
+                        <div class="vt-url-header">
+                            <span>${url.verdict === 'MALICIOUS' ? '🔴' : url.verdict === 'SUSPICIOUS' ? '🟡' : '🟢'}</span>
+                            <span class="vt-verdict">${url.verdict}</span>
+                            <span class="vt-stats">${url.malicious || 0}/${url.total || 0} antivírus</span>
+                        </div>
+                        <div class="vt-url-text">${url.url}</div>
+                    </div>
+                `).join('');
+            }
+        }
+    } catch (err) {
+        console.error('VT error:', err);
+    }
+
+    btn.textContent = '🔍 Verificar URLs no VirusTotal';
+    btn.disabled = false;
+}
+
 // ─── Show AI Modal ───
 function showAIModal(result) {
     const riskMap = {
@@ -342,12 +410,13 @@ function showAIModal(result) {
         'CRITICAL': { emoji: '🔴', color: '#ef4444', label: 'Phishing Detetado' },
     };
 
-    const risk      = riskMap[result.risk_level] || { emoji: '❓', color: '#6366f1', label: result.result };
-    const aiDetails = result.ai_details || {};
-    const reasons   = aiDetails.reasons || [];
+    const risk       = riskMap[result.risk_level] || { emoji: '❓', color: '#6366f1', label: result.result };
+    const aiDetails  = result.ai_details || {};
+    const reasons    = aiDetails.reasons || [];
     const indicators = aiDetails.risk_indicators || [];
     const aiVerdict  = aiDetails.verdict || result.result;
     const aiConf     = aiDetails.confidence || 0;
+    const id_email   = result.id_email || 0;
 
     let explanation = "";
     if (aiVerdict === "PHISHING") {
@@ -369,7 +438,6 @@ function showAIModal(result) {
             </div>
         `).join('');
 
-    // Domain verification block
     const domainHTML = aiDetails.impersonated_company ? `
         <div class="modal-domain-check">
             <div class="domain-row">
@@ -434,6 +502,8 @@ function showAIModal(result) {
             </div>
 
             ${reasonsHTML ? `<div class="modal-reasons">${reasonsHTML}</div>` : ''}
+
+            
 
             <div class="modal-footer">
                 <button class="btn btn-primary" onclick="closeAIModal()">Percebido</button>
